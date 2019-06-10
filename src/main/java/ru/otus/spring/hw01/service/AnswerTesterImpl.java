@@ -1,25 +1,36 @@
 package ru.otus.spring.hw01.service;
 
 import java.util.Queue;
+import java.util.function.Supplier;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import ru.otus.spring.hw01.domain.Task;
+import ru.otus.spring.hw01.dto.Twit;
 
 @Service
 public class AnswerTesterImpl implements AnswerTester {
+	
+	private final Supplier<Queue<Twit>> answersSupplier; 
+	
+	public AnswerTesterImpl(@Qualifier("answersSupplier") Supplier<Queue<Twit>> answersSupplier) {
+		super();
+		this.answersSupplier = answersSupplier;
+	}
 
 	@Override
-	public String test(Queue<Task> tasks, Queue<String> answers) {
+	public String apply(Queue<Twit> userAnswers) {
+		Queue<Twit> rightAnswers = answersSupplier.get();
 		int count = 0;
-		Task task;
-		String answer;
-		while((task = tasks.poll()) != null && (answer = answers.poll()) != null) {
-			if(task.getAnswer().equalsIgnoreCase(answer)) {
+		Twit rightAns;
+		Twit userAns;
+		while((rightAns = rightAnswers.poll()) != null && (userAns = userAnswers.poll()) != null) {
+			if(rightAns.equals(userAns)) {
 				count++;
 			}
 		}
 		return "" + count;
 	}
+
 
 }

@@ -3,7 +3,9 @@ package ru.otus.spring.hw01.service;
 import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Queue;
+import java.util.function.Supplier;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
@@ -15,16 +17,18 @@ import ru.otus.spring.hw01.dto.Twit;
 @Service // @Controller
 public class ExaminatorImpl implements Examinator {
 
-	private final TaskDao taskDao;
+	private final Supplier<Queue<Twit>> questionsSupplier;
 	private final AnswerTester answerTester;
 	private final Interviewer interviewer;
 	private final ReportBuilder reportBuilder;
 	private final LocaleMessageProvider localeMessageProvider;
 
-	public ExaminatorImpl(TaskDao taskDao, AnswerTester answerTester, 
-			Interviewer interviewer, ReportBuilder reportBuilder,
+	public ExaminatorImpl(@Qualifier("questionsSupplier") Supplier<Queue<Twit>> questionsSupplier, 
+			AnswerTester answerTester, 
+			Interviewer interviewer, 
+			ReportBuilder reportBuilder,
 			LocaleMessageProvider localeMessageProvider) {
-		this.taskDao = taskDao; // <- TasksDispatcher
+		this.questionsSupplier = questionsSupplier; // <- TasksDispatcher
 		this.answerTester = answerTester;
 		this.interviewer = interviewer;
 		this.reportBuilder = reportBuilder;
@@ -33,49 +37,35 @@ public class ExaminatorImpl implements Examinator {
 		// или добавить в интревьювер метод для одного вопроса
 	}
 	
-	// сделать методы пабликами для тестирования
-	// можно подсовывать псевдо интервьюера
-	private String askFirstName() {
-		String questionFirstName = localeMessageProvider.getMessage("question.firstname", null);
-		return interviewer.ask(questionFirstName);
+
+	private Queue<Twit> askQuestions() {
+		Queue<Twit> questions = new LinkedList<Twit>();
+		Twit firstNameTwit = new Twit(-2L, localeMessageProvider.getMessage("question.firstname", null));
+		Twit lastNameTwit = new Twit(-1L, localeMessageProvider.getMessage("question.lastname", null));
+		questions.add(firstNameTwit);
+		questions.add(lastNameTwit);
+		questions.addAll(questionsSupplier.get());
+		return interviewer.apply(questions);
 	}
 	
-	private String askLastName() {
-		String questionLastName = localeMessageProvider.getMessage("question.lastname", null);
-		return interviewer.ask(questionLastName);
+	private String checkAnswers(Queue<Twit> userAnswers) {
+		return answerTester.apply(userAnswers);
 	}
-	
-	// askQuestions()
-	
-	private String checkAnswers(Queue<Task> tasks, Queue<String> answers) {
-		return answerTester.test(tasks, answers);
-	}
-	
+
 	private void printResult(String firstName, String lastName, String grade) {
-		String report = localeMessageProvider.getMessage("report.template", 
-				new String[]{firstName, lastName, grade});
-				//reportBuilder.buildReport(firstName, lastName, grade);
+		//String report = localeMessageProvider.getMessage("report.template", new String[]{firstName, lastName, grade});
+		String report = reportBuilder.buildReport(firstName, lastName, grade);
 		System.out.println(report);
 	}
 
 
 	@Override
 	public void takeAnExam() {
-		// ask fName and LastName
-		// Report.setName ...
-		String firstName = askFirstName();
-		String lastName = askLastName();
-		
-		// Queue<> = askQuestions()
-		Queue<String> questions = new LinkedList<String>();
-		Queue<Task> tasks = taskDao.get();
-		tasks.forEach(task -> questions.add(task.getQuestion()));
-		Queue<String> answers = interviewer.apply(questions);
+		Queue<Twit> userAnswers = askQuestions();
 
-		//String firstName = answers.poll();
-		//String lastName = answers.poll();
-
-		String grade = checkAnswers(tasks, answers); // return String, or Grade
+		String firstName = userAnswers.poll().getText();
+		String lastName = userAnswers.poll().getText();
+		String grade = checkAnswers(userAnswers);
 
 		printResult(firstName, lastName, grade);
 	}

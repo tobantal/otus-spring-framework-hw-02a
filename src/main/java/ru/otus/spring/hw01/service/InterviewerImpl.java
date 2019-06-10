@@ -4,7 +4,10 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Scanner;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import ru.otus.spring.hw01.dto.Twit;
 
 @Service
 public class InterviewerImpl implements Interviewer {
@@ -13,25 +16,28 @@ public class InterviewerImpl implements Interviewer {
 	// вернуться к счетчику запросов
 	// считывать данные из файла properties
 
-	private Scanner scanner = new Scanner(System.in);
-	private int limitQuestions = 7; // <- form properties
-
-	@Override
-	public Queue<String> apply(Queue<String> questions) {
-		Queue<String> answers = new LinkedList<String>();
-		questions.forEach(question -> {
-			String answer = ask(question);
-			answers.add(answer);
-			limitQuestions--;
-		});
-		return answers;
+	private int limitQuestions;
+	private String errorMsg;
+	
+	public InterviewerImpl(@Value("${questions.limit}") int limitQuestions,
+			@Value("${error.questions.limit}") String errorMsg) {
+		this.limitQuestions = limitQuestions;
 	}
 
 	@Override
-	public String ask(String question) {
-		System.out.println(question);
-		limitQuestions--; // можно декримент вынести в 
-		return scanner.next();
+	public Queue<Twit> apply(Queue<Twit> questions) {
+		try(Scanner scanner = new Scanner(System.in)) {
+			Queue<Twit> answers = new LinkedList<Twit>();
+			questions.forEach(questionTwit -> {
+				System.out.println(questionTwit.getText());
+				String answerText = scanner.next();
+				answers.add(new Twit(questionTwit.getId(), answerText));
+				if(--limitQuestions < 0) {
+					throw new IndexOutOfBoundsException(errorMsg);
+				};
+			});
+			return answers;
+		}
 	}
 
 }

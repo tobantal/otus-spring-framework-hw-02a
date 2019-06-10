@@ -1,13 +1,11 @@
 package ru.otus.spring.hw01.service;
 
 import java.util.Queue;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 
-import ru.otus.spring.hw01.domain.Task;
+import ru.otus.spring.hw01.dto.Twit;
 
 
-public interface AnswerTester { //extends BiFunction<Queue<Task>, Queue<String>, String> 
-
-	public String test(Queue<Task> tasks, Queue<String> answers);
+public interface AnswerTester extends Function<Queue<Twit>, String> {
 
 }
